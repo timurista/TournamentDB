@@ -4,9 +4,6 @@
 #
 
 import psycopg2
-# for cleaning purposes
-import bleach
-
 
 def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
@@ -35,7 +32,7 @@ def countPlayers():
     db = connect()
     c = db.cursor()
     c.execute("SELECT count(*) FROM players;")
-    count = c.fetchall()[0][0]
+    count = c.fetchone()[0]
     db.close()
     return count
 
@@ -44,7 +41,7 @@ def countMatches():
     db = connect()
     c = db.cursor()
     c.execute("SELECT count(*) FROM matches;")
-    count = c.fetchall()[0][0]
+    count = c.fetchone()[0]
     db.close()
     return count
 
@@ -59,8 +56,7 @@ def registerPlayer(name):
     """
     db = connect()
     c = db.cursor()
-    nameC = bleach.clean(name)
-    c.execute("INSERT INTO players (name, wins, matches) VALUES (%s,0,0);", (nameC,) )
+    c.execute("INSERT INTO players (name) VALUES (%s);", (name,) )
     db.commit()
     db.close()
 
@@ -98,14 +94,14 @@ def reportMatch(winner, loser, draw=0):
 
     # ties are logged seperately from wins and losses so that extra matches aren't logged
     if draw:
-        c.execute("INSERT INTO matches (winner, loser, draw1, draw2) VALUES (0, 0, %s, %s);", (winner, loser) )
+        c.execute("INSERT INTO matches (draw1, draw2) VALUES (%s, %s);", (winner, loser) )
     else:
-        c.execute("INSERT INTO matches (winner, loser, draw1, draw2) VALUES (%s, %s, 0, 0);", (winner, loser) )
+        c.execute("INSERT INTO matches (winner, loser) VALUES (%s, %s);", (winner, loser) )
     db.commit()
     db.close()    
  
  
-def swissPairings():
+def swissPairings(rematchesAllowed=True):
     """Returns a list of pairs of players for the next round of a match.
   
     Assuming that there are an even number of players registered, each player
@@ -122,36 +118,38 @@ def swissPairings():
     """
     db = connect()
     c = db.cursor()    
+    # # get players based on their standing
+    # c.execute("SELECT id, name FROM standings;")
+    # players = c.fetchall()
+
+    c.execute("SELECT * FROM allMatchPairings;")
+    allMatches = c.fetchall()
+    # print matches
+
+    # l = len(players)
+    # # print matches
+    # # odd numbers play the top spot
+    # # last team gets a bye if odd, since -1 is selected
+    # # l%2 will be 0 if even 1 if odd, so if l=7, 7-1 = 6 is leaving 7th value with a bye
+
+    if rematchesAllowed:
+        allMatches = []
+
     c.execute("""
-        SELECT a.id, a.name, b.id, b.name 
-        FROM standings as a, 
-          standings as b 
-        WHERE a.id < b.id
-          and a.win = b.win
-          and (a.id, b.id) 
-            not in (
-              SELECT winner, loser
-              from matches
-            )
-          and (b.id, a.id) 
-            not in (
-              SELECT winner, loser
-              from matches
-            )
-          and (a.id, b.id) 
-            not in (
-              SELECT draw1, draw2
-              from matches
-            )
-          and (b.id, a.id) 
-            not in (
-              SELECT draw1, draw2
-              from matches
-            );
-    """)
+        SELECT ranked1.PlayerId player1, ranked1.name, 
+            ranked2.PlayerId player2, ranked2.name
+        FROM player_rankings AS 
+            ranked1
+        INNER JOIN player_rankings 
+            AS ranked2 
+            -- checks that evens are selected
+            ON ranked1.PlayerRank + 1 = ranked2.PlayerRank
+        -- makes sure only odds are selected
+        WHERE ranked1.playerrank % 2 = 1;
+            """)
     pairs = c.fetchall()
     db.close()
+
+    # Make sure no matches in pairs
+    pairs = [p for p in pairs if (p[0],p[2]) not in allMatches and (p[2],p[0]) not in allMatches]
     return pairs   
-
-
-

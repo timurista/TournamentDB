@@ -2,6 +2,7 @@ from tournament import *
 from random import shuffle, randint
 
 def setUp():
+	""" basic setup for some tests"""
 	deleteMatches()
 	deletePlayers()
 	registerPlayer("Mr. Incredible")
@@ -10,18 +11,17 @@ def setUp():
 	registerPlayer("Batman")
 
 def testExtraCredit():
-	setUp()
+	""" tests various conditions"""
 	testDraw()
 	testNoRematch()
-	testSwissGamesPlayed(2)
-	testSwissGamesPlayed(5)
-	testSwissGamesPlayed(6)
-	testSwissGamesPlayed(11)
-	testSwissGamesPlayed(8,True)
-	testSwissGamesPlayed(7,True)
+	testSwissGamesPlayed(6,False,True)
+	testSwissGamesPlayed(4,False,True)
+	testSwissGamesPlayed(2,False,True)
+	testSwissGamesPlayed(3,False,True)
+	testSwissGamesPlayed(5,False,True)
+	testSwissGamesPlayed(7,False,True)
 
-
-def testSwissGamesPlayed(number=5, drawsAllowed=False):
+def testSwissGamesPlayed(number=5, drawsAllowed=False, rematchesAllowed=True):
 	"""tests by running through games for a number of players"""
 	deleteMatches()
 	deletePlayers()
@@ -30,21 +30,23 @@ def testSwissGamesPlayed(number=5, drawsAllowed=False):
 		registerPlayer("Player "+str(n))
 
 	# does this until no more pairs left
-	simulateSwissGame(100, drawsAllowed)
+	simulateSwissGame(number, drawsAllowed, rematchesAllowed)
 
 	# counts matches
 	m = countMatches()
 
-	print "11.%s tested swiss game with %s players" % (players, players)
+	# only test if rematches are allowed
+	if rematchesAllowed:
+		i = int(players%2 == 0);
+		expected_games = ( players * (players+i) ) / 2
+		print "11.%s tested that swiss game produces correct # of matches (%s) with %s players" % (players, expected_games, players)		
+		assert m==expected_games, "Full number of matches are not being played, got " + str(m) + " but expected: " + str(expected_games)
+	else:
+		print "Games played: "+str(m)
 
-	expected_games = ( players * (players-1) ) / 2
-	
-	# players where players-1 is number of player each one plays and / 2 because a,b only not b,a		
-	assert "Full number of matches are not being played, got " + str(m) + " but expected: " + str(expected_games)
-	if drawsAllowed:
-		print "\t ties allowed Expected: " + str(m) + "got: "+ str(expected_games)
 
 def testNoRematch():
+	"""tests that a rematch does not happen between 2 players"""
 	setUp()
 	standings = playerStandings()
 	[id1, id2, id3, id4] = [row[0] for row in standings]
@@ -57,6 +59,7 @@ def testNoRematch():
 	for (pid1, pname1, pid2, pname2) in pairings:
 		reportMatch(pid1,pid2)
 
+	# register 2 players
 	registerPlayer("Captain Falcon")
 	registerPlayer("Queen Zelda")
 
@@ -64,11 +67,18 @@ def testNoRematch():
 	print "10. No rematch allowed between swiss pairs"
 	assert len(new_pairings), "Nothing in the new pairs"
 
+	# Check that each new swiss pair is not in the old pairing
 	for pair in new_pairings:
 		assert pair not in old_pairings, "\nCurrent pair: \n  " + str(pair) + "\nIn old pairings: \n  "+str(old_pairings)
 
-def simulateSwissGame(n=1000, drawsAllowed=False):
-	pairings = swissPairings()
+def simulateSwissGame(n=20, drawsAllowed=False, rematchesAllowed=True):
+	"""
+	Simulates a swiss tournament for n rounds or less
+	- user can choose to allow draws or not allow rematches
+	- each round a swis pairing is chosen and random winners or draws are chosen and reported
+	then a new pair is chosen
+	"""
+	pairings = swissPairings(rematchesAllowed)
 	count = 0
 	tie = 0
 
@@ -81,7 +91,7 @@ def simulateSwissGame(n=1000, drawsAllowed=False):
 			if drawsAllowed:
 				tie = randint(0,1)
 			reportMatch(pair[0],pair[1], tie)
-		pairings = swissPairings()
+		pairings = swissPairings(rematchesAllowed)
 		count+=1
 		# failsafe
 		if count>n:
@@ -89,6 +99,7 @@ def simulateSwissGame(n=1000, drawsAllowed=False):
 
 
 def testDraw():
+	""" tests that a draw or tie is possible and does not produce a win for the players invovled"""
 	setUp()
 	standings = playerStandings()
 	[id1, id2, id3, id4] = [row[0] for row in standings]

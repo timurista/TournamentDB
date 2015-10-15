@@ -4,29 +4,36 @@
 -- statements if you choose to use it.
 --
 -- You can write comments in this file by starting them with two dashes, like
--- these lines here.
-drop view standings;
-drop view totals;
-drop view wins;
+-- Initialize db
+DROP DATABASE IF EXISTS tournament;
+CREATE DATABASE tournament;
+\c tournament
 
-drop table matches;
+
+-- these lines here.
+drop view if exists player_rankings;
+drop view if exists standings;
+drop view if exists totals;
+drop view if exists wins;
+drop view if exists allMatchPairings;
+
+
+drop table if exists matches;
 
 create table matches(
 	id serial,
-	winner int,
-	loser int,
-	draw1 int,
-	draw2 int,
+	winner int DEFAULT 0,
+	loser int DEFAULT 0,
+	draw1 int DEFAULT 0,
+	draw2 int DEFAULT 0,
 	primary key (id)
 );
 
-drop table players;
+drop table if exists players;
 
 create table players(
         id serial,
 	name text,
-	wins int,
-	matches int,
 	primary key (id)
 	
 );
@@ -59,3 +66,16 @@ create view standings as
             group by wins.id, wins.name, 
               wins.win, totals.total_matches
             order by wins.win desc;
+
+-- holds rank of player
+CREATE VIEW player_rankings AS
+	SELECT id AS PlayerId, name, row_number() 
+	OVER (order by win) as PlayerRank
+	FROM standings;
+
+
+-- holds matches
+CREATE VIEW allMatchPairings AS
+	SELECT winner, loser from matches
+	UNION
+	SELECT draw1, draw2 from matches;
