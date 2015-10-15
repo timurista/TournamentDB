@@ -5,9 +5,9 @@
 First you must install vagrant or another virtual system to run Postgres or psql.
 After you have a virtual machine up and running, log into psql 
 type the command and hit enter:
-	```vagrant$ psql```
+	```psql```
 Then type
-	```vagrant=> \i tournament.sql```
+	```\i tournament.sql```
 Which will create the necessary database, views and tables, and log you into the appropriate databse. Type "\q" to exit.
 
 ### Running the tests
