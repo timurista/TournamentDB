@@ -11,7 +11,9 @@ def setUp():
 	registerPlayer("Batman")
 
 def testExtraCredit():
-	""" tests various conditions"""
+	""" tests draw, no rematch possible, 
+	and that expected number of games in a swiss tournament 
+	is actual number played"""
 	testDraw()
 	testNoRematch()
 	testSwissGamesPlayed(6,False,True)

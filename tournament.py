@@ -117,21 +117,11 @@ def swissPairings(rematchesAllowed=True):
         name2: the second player's name
     """
     db = connect()
-    c = db.cursor()    
-    # # get players based on their standing
-    # c.execute("SELECT id, name FROM standings;")
-    # players = c.fetchall()
-
+    c = db.cursor()
+    # get all matches (even draws) which have been played
     c.execute("SELECT * FROM allMatchPairings;")
     allMatches = c.fetchall()
-    # print matches
-
-    # l = len(players)
-    # # print matches
-    # # odd numbers play the top spot
-    # # last team gets a bye if odd, since -1 is selected
-    # # l%2 will be 0 if even 1 if odd, so if l=7, 7-1 = 6 is leaving 7th value with a bye
-
+ 
     if rematchesAllowed:
         allMatches = []
 
